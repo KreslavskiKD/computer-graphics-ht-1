@@ -1,11 +1,12 @@
 set(SRCS
     main.cpp
-    TriangleWindow.cpp
-    TriangleWindow.h
+    FractalWindow.cpp
+    FractalWindow.h
+    FractalWidget.cpp
+    FractalWidget.h
 
     Shaders/diffuse.fs
     Shaders/diffuse.vs
-    Textures/voronoi.png
 
     resources.qrc
 )
