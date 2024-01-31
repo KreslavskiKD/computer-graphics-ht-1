@@ -1,6 +1,6 @@
 ![build_cmake_status](https://github.com/sadads1337/mse-gl-hw-template/actions/workflows/build_cmake.yml/badge.svg)
 
-# ITMO MSE OpenGL homework template 2022
+# OpenGL homework
 
 Qt based demo project to demonstrate how to use and implement basic 3D graphics features.
 No optimizations exists. Use only for educational purposes.
@@ -12,7 +12,7 @@ Help students with their submission is the main goal of this repository. Do not 
 ## Requirements
 
 - git [https://git-scm.com](https://git-scm.com);
-- C++17 compatible compiler;
+- C++20 compatible compiler;
 - CMake 3.10+ [https://cmake.org/](https://cmake.org/);
 - Qt 5 [https://www.qt.io/](https://www.qt.io/);
 - (Optionally) Your favourite IDE;

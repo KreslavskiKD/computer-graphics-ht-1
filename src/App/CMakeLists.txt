@@ -1,9 +1,14 @@
 set(SRCS
     main.cpp
-    FractalWindow.cpp
-    FractalWindow.h
-    FractalWidget.cpp
-    FractalWidget.h
+    MorphingWindow.cpp
+    MorphingWindow.h
+    
+    Utils/Buffers.h
+    Utils/Drawable.h
+    Utils/Camera.h
+
+    Utils/FpsGuard.h
+    Utils/FpsGuard.cpp
 
     Shaders/diffuse.fs
     Shaders/diffuse.vs
@@ -19,4 +24,5 @@ target_link_libraries(demo-app
     PRIVATE
         Qt5::Widgets
         FGL::Base
+        thirdparty::tinygltf
 )

@@ -1,6 +1,6 @@
 set(BASE_SRCS
-    GLWindow.cpp
-    GLWindow.hpp
+        GLWidget.cpp
+        GLWidget.hpp
 )
 
 add_library(Base ${BASE_SRCS})
