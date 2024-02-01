@@ -12,6 +12,14 @@
 #include <string>
 #include <filesystem>
 #include <iostream>
+#include <cmath>
+
+#ifdef Q_OS_WIN32
+# include <windows.h>
+#else
+# include <X11/XKBlib.h>
+# undef KeyPress
+#endif
 
 // Define these only in *one* .cc file.
 #define TINYGLTF_IMPLEMENTATION
@@ -21,28 +29,114 @@
 #define TINYGLTF_NOEXCEPTION
 
 MorphingWindow::MorphingWindow() noexcept {
-	const auto formatFPS = [](const auto value, const auto morphing) {
-		return QString("FPS: %1, morphing: %2").arg(QString::number(value), QString::number(morphing));
+	const auto formatFPS = [](const auto value) {
+		return QString("FPS: %1").arg(QString::number(value));
 	};
+
+	const auto formatMorphing = [](const auto morphing) {
+		return QString("Morphing: %1").arg(QString::number(morphing));
+	};
+
+	const auto formatLightColorR = [](const auto intensity) {
+		return QString("Light color RED: %1").arg(QString::number(intensity));
+	};
+
+	const auto formatLightColorG = [](const auto intensity) {
+		return QString("Light color GREEN: %1").arg(QString::number(intensity));
+	};
+
+	const auto formatLightColorB = [](const auto intensity) {
+		return QString("Light color BLUE: %1").arg(QString::number(intensity));
+	};
+
+	const auto formatLightColorIntensity = [](const auto intensity) {
+		return QString("Ambient light intensity: %1").arg(QString::number(intensity));
+	};
+
+	const auto formatLightPos = [](const auto grad) {
+		return QString("Light position grad: %1").arg(QString::number(grad));
+	};
+
+	morphingValue = new QLabel(formatMorphing(1), this);
+	morphingValue->setStyleSheet("QLabel { color : white; }");
 
 	morphingSlider.setRange(0, 100);
 	morphingSlider.setValue(0);
 
-	auto fps = new QLabel(formatFPS(0, 1), this);
+	lightColorValueR = new QLabel(formatLightColorR(1), this);
+	lightColorValueR->setStyleSheet("QLabel { color : white; }");
+
+	lightColorSliderR.setRange(0, 100);
+	lightColorSliderR.setValue(100);
+
+	lightColorValueG = new QLabel(formatLightColorG(1), this);
+	lightColorValueG->setStyleSheet("QLabel { color : white; }");
+
+	lightColorSliderG.setRange(0, 100);
+	lightColorSliderG.setValue(100);
+
+	lightColorValueB = new QLabel(formatLightColorB(1), this);
+	lightColorValueB->setStyleSheet("QLabel { color : white; }");
+
+	lightColorSliderB.setRange(0, 100);
+	lightColorSliderB.setValue(100);
+
+	lightColorValueIntensity = new QLabel(formatLightColorIntensity(1), this);
+	lightColorValueIntensity->setStyleSheet("QLabel { color : white; }");
+
+	lightColorSliderIntensity.setRange(0, 100);
+	lightColorSliderIntensity.setValue(50);
+
+	lightPosValue = new QLabel(formatLightPos(1), this);
+	lightPosValue->setStyleSheet("QLabel { color : white; }");
+
+	lightPosSlider.setRange(0, 360);
+	lightPosSlider.setValue(0);
+
+	auto fps = new QLabel(formatFPS(0), this);
 	fps->setStyleSheet("QLabel { color : white; }");
 
 	auto layout = new QVBoxLayout();
 	layout->addWidget(fps, 1);
+
+	layout->addWidget(morphingValue);
 	layout->addWidget(&morphingSlider);
+
+	layout->addWidget(lightColorValueR);
+	layout->addWidget(&lightColorSliderR);
+
+	layout->addWidget(lightColorValueG);
+	layout->addWidget(&lightColorSliderG);
+
+	layout->addWidget(lightColorValueB);
+	layout->addWidget(&lightColorSliderB);
+
+	layout->addWidget(lightColorValueIntensity);
+	layout->addWidget(&lightColorSliderIntensity);
+
+	layout->addWidget(lightPosValue);
+	layout->addWidget(&lightPosSlider);
 
 	setLayout(layout);
 
 	timer_.start();
 
 	connect(this, &MorphingWindow::updateUI, [=] {
-		fps->setText(formatFPS(ui_.fps, morphingSlider.value()));
+		fps->setText(formatFPS(ui_.fps));
+		morphingValue->setText(formatMorphing(morphingSlider.value()));
+		lightColorValueR->setText(formatLightColorR(lightColorSliderR.value()));
+		lightColorValueG->setText(formatLightColorG(lightColorSliderG.value()));
+		lightColorValueB->setText(formatLightColorB(lightColorSliderB.value()));
+		lightColorValueIntensity->setText(formatLightColorIntensity(lightColorSliderIntensity.value()));
+		lightPosValue->setText(formatLightPos(lightPosSlider.value()));
 	});
+
 	connect(&morphingSlider, SIGNAL(valueChanged(int)), &morphingSlider, SLOT(setValue(int)));
+	connect(&lightColorSliderR, SIGNAL(valueChanged(int)), &lightColorSliderR, SLOT(setValue(int)));
+	connect(&lightColorSliderG, SIGNAL(valueChanged(int)), &lightColorSliderG, SLOT(setValue(int)));
+	connect(&lightColorSliderB, SIGNAL(valueChanged(int)), &lightColorSliderB, SLOT(setValue(int)));
+	connect(&lightColorSliderIntensity, SIGNAL(valueChanged(int)), &lightColorSliderIntensity, SLOT(setValue(int)));
+	connect(&lightPosSlider, SIGNAL(valueChanged(int)), &lightPosSlider, SLOT(setValue(int)));
 }
 
 MorphingWindow::~MorphingWindow() {
@@ -78,7 +172,7 @@ bool MorphingWindow::loadModel(const char *filename) {
 
 void MorphingWindow::onInit() {
 	// Load GLTF model
-	const std::filesystem::path path = std::filesystem::absolute("../../../../src/App/Models/18th-century-oilan/source/OilCan.glb");
+	const std::filesystem::path path = std::filesystem::absolute("../../../../src/App/Models/sphinx.glb");
 
 	if (!loadModel(path.string().c_str())) {
 		return;
@@ -101,6 +195,7 @@ void MorphingWindow::onInit() {
   
 	morphingUniform_ = program_->uniformLocation("morphing");
 	lightColorUniform_ = program_->uniformLocation("lightColor");
+	lightIntensityUniform_ = program_->uniformLocation("lightIntensity");
 	lightPosUniform_ = program_->uniformLocation("lightPos");
 	viewPosUniform_ = program_->uniformLocation("viewPos");
 
@@ -108,7 +203,7 @@ void MorphingWindow::onInit() {
 	program_->release();
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	// glEnable(GL_CULL_FACE);
 
 	// Clear all FBO buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -131,12 +226,22 @@ void MorphingWindow::onRender() {
 
 	// Update uniform value
 	program_->setUniformValue(mUniform_, model_);
-	program_->setUniformValue(vUniform_, cam.getView());
+	program_->setUniformValue(vUniform_, currentMatrix());
 	program_->setUniformValue(pUniform_, projection_);
-	program_->setUniformValue(lightColorUniform_, QVector3D(1., static_cast<float>(0.8), 1.));
-	program_->setUniformValue(lightPosUniform_, QVector3D(5., 5., 5.));
-	program_->setUniformValue(viewPosUniform_, cam.getPos());
+		// Light
+	program_->setUniformValue(lightColorUniform_, QVector3D(
+		((float)lightColorSliderR.value() / (float)100.0), 
+		((float)lightColorSliderG.value() / (float)100.0), 
+		((float)lightColorSliderB.value() / (float)100.0))
+	);
+	program_->setUniformValue(lightIntensityUniform_, ((float)lightColorSliderIntensity.value() / (float)100.0));
 
+	std::tuple<float, float> xy = gradToXY(lightPosSlider.value());
+
+	program_->setUniformValue(lightPosUniform_, QVector3D(std::get<0>(xy), std::get<1>(xy), 25.));
+		// Camera position
+	program_->setUniformValue(viewPosUniform_, camera.cameraLocation);
+		// Morphing
 	morphing_.setX((double)morphingSlider.value() / 100);
 	program_->setUniformValue(morphingUniform_, morphing_);
 
@@ -155,25 +260,115 @@ void MorphingWindow::onRender() {
 	}
 }
 
+QMatrix4x4 MorphingWindow::currentMatrix() const {
+    QMatrix4x4 viewMatrix;
+    viewMatrix.lookAt(camera.cameraLocation, camera.focusPoint, camera.up);
+    return viewMatrix;
+}
+
+void MorphingWindow::wheelEvent(QWheelEvent* event) {
+    auto const delta = event->angleDelta().y();
+    auto const focusVector = camera.cameraLocation - camera.focusPoint;
+    auto const mul = -delta / 1000.;
+    camera.cameraLocation += mul*focusVector;
+    update();
+}
+
+void MorphingWindow::mousePressEvent(QMouseEvent* e) {
+    mousePressPosition = QVector2D(e->localPos());
+}
+
+void MorphingWindow::mouseReleaseEvent(QMouseEvent*) {
+    mousePressPosition.reset();
+}
+
+void MorphingWindow::mouseMoveEvent(QMouseEvent* e) {
+    if (!mousePressPosition) {
+        return;
+    }
+
+    auto const pos = QVector2D(e->localPos());
+    auto const diff = pos - *mousePressPosition;
+    auto const focusVector = camera.cameraLocation - camera.focusPoint;
+    auto const up = camera.up.normalized();
+    auto const right = QVector3D::crossProduct(camera.up, focusVector).normalized();
+
+	std::cout << "--> 3" << std::endl;
+
+    if (e->buttons() & Qt::LeftButton) {
+        // rotate
+        QMatrix4x4 mat;
+        mat.rotate(-diff.x(), up);
+        mat.rotate(-diff.y(), right);
+        auto const newFocusVector = mat.map(focusVector);
+        auto const newCameraPos = newFocusVector + camera.focusPoint;
+        camera.cameraLocation = newCameraPos;
+        camera.up = mat.mapVector(up);
+        // Ensure the "up" vector is actually orthogonal to the focus vector. This is approximately
+        // the case anyways, but might drift over time due to float precision.
+        camera.up -= QVector3D::dotProduct(camera.up, newFocusVector) * camera.up;
+        camera.up.normalize();
+    }
+    if (e->buttons() & Qt::RightButton) {
+        // pan
+        auto const panDelta = -diff.x() / width() * right + diff.y() / height() * up;
+        camera.cameraLocation += panDelta;
+        camera.focusPoint += panDelta;
+    }
+
+    mousePressPosition = QVector2D(e->localPos());
+    update();
+}
+
+/*
+bool MorphingWindow::checkCapsLock() {
+	// platform dependent method of determining if CAPS LOCK is on
+	#ifdef Q_OS_WIN32 // MS Windows version
+	return GetKeyState(VK_CAPITAL) == 1;
+	#else // X11 version (Linux/Unix/Mac OS X/etc...)
+	Display * d = XOpenDisplay((char*)0);
+	bool caps_state = false;
+	if (d) {
+		unsigned n;
+		XkbGetIndicatorState(d, XkbUseCoreKbd, &n);
+		caps_state = (n & 0x01) == 1;
+	}
+	return caps_state;
+	#endif
+}
+*/
+
+/*
 void MorphingWindow::keyReleaseEvent(QKeyEvent *event) {
-	if (event->key() == Qt::Key_E) {
-		cam.moveForward();
-    }
-	if (event->key() == Qt::Key_F) {
-        cam.moveBackward();
-    }
+	bool hold = checkCapsLock();
 	if (event->key() == Qt::Key_W) {
-		cam.moveUp();
+		cam.moveForward(hold);
     }
-	if(event->key() == Qt::Key_S) {
-		cam.moveDown();
+	if (event->key() == Qt::Key_S) {
+        cam.moveBackward(hold);
+    }
+	if (event->key() == Qt::Key_Z) {
+		cam.moveUp(hold);
+    }
+	if(event->key() == Qt::Key_X) {
+		cam.moveDown(hold);
     }
 	if(event->key() == Qt::Key_A) {
-		cam.moveLeft();
+		cam.moveLeft(hold);
     }
 	if(event->key() == Qt::Key_D) {
-		cam.moveRight();
+		cam.moveRight(hold);
 	}
+}
+*/
+
+std::tuple<float, float> MorphingWindow::gradToXY(int angle) {
+	float radius = 25.0;
+
+	float x = radius * sin(M_PI * 2 * angle / 360);
+	float y = radius * cos(M_PI * 2 * angle / 360);
+
+	return std::tuple<float, float>{x, y};
 }
 
 void MorphingWindow::onResize(const size_t width, const size_t height)
@@ -185,7 +380,7 @@ void MorphingWindow::onResize(const size_t width, const size_t height)
 	const auto aspect = static_cast<float>(width) / static_cast<float>(height);
 	const auto zNear = 0.1f;
 	const auto zFar = 100.0f;
-	const auto fov = 60.0f;
+	const auto fov = 80.0f;
 	projection_.setToIdentity();
 	projection_.perspective(fov, aspect, zNear, zFar);
 }
@@ -198,28 +393,13 @@ void MorphingWindow::bindMesh(tinygltf::Mesh &mesh) {
 		drawables.emplace_back();
 		drawables.back().vao->bind();
 
-		std::cout << "--> 1 " << std::endl;
-
 		tinygltf::Primitive primitive = mesh.primitives[i];
 		tinygltf::Accessor indexAccessor = model.accessors[primitive.indices];
 
-		std::cout << "--> 2 " << std::endl;
-
 		if (indexAccessor.bufferView >= 0) {
-
-			std::cout << "--> 3 " << std::endl;
-
 			assert(buffer_to_ebo.find(indexAccessor.bufferView) != buffer_to_ebo.end()); 
-
-			std::cout << "--> 4 " << std::endl;
-
 			ebos[buffer_to_ebo[indexAccessor.bufferView]].bind();
-
-			std::cout << "--> 5 " << std::endl;
-
 			drawables.back().ebo = true;
-
-			std::cout << "--> 6 " << std::endl;
 		}
 		std::cout << "--> bind ebo: " << indexAccessor.bufferView << std::endl;
 

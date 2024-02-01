@@ -3,7 +3,7 @@
 
 #include <QOpenGLBuffer>
 
-#include "../../thirdparty/tinygltf/tinygltf/tiny_gltf.h"
+#include <tinygltf/tiny_gltf.h>
 
 struct BufferVbo {
     BufferVbo(const tinygltf::Buffer& buf, const tinygltf::BufferView& bufView) {
@@ -15,6 +15,10 @@ struct BufferVbo {
 
     void bind() {
         glBuffer_.bind();
+    }
+
+    ~BufferVbo() {
+        glBuffer_.release();
     }
 
 private:
@@ -31,6 +35,10 @@ struct BufferEbo {
 
     void bind() {
         glBuffer_.bind();
+    }
+
+    ~BufferEbo() {
+        glBuffer_.release();
     }
 
 private:

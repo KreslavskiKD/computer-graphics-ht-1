@@ -6,6 +6,7 @@ in vec2 texcoord;
 uniform sampler2D tex;
 
 uniform vec3 lightColor;
+uniform float lightIntensity;
 uniform vec3 lightPos;
 
 uniform vec3 viewPos;
@@ -13,9 +14,7 @@ uniform vec3 viewPos;
 out vec4 color;
 
 void main() {
-	float ambientStrength = 0.5f;
-	
-    vec3 ambient = ambientStrength * lightColor;
+    vec3 ambient = lightIntensity * lightColor;
     
 	vec3 norm = normalize(normal);
     vec3 lightDir = normalize(lightPos - position);

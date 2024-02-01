@@ -2,7 +2,6 @@
 
 #include "Utils/Buffers.h"
 #include "Utils/Drawable.h"
-#include "Utils/Camera.h"
 #include "Utils/FpsGuard.h"
 
 #include <tinygltf/tiny_gltf.h>
@@ -22,8 +21,10 @@
 #include <QLabel>
 #include <QSlider>
 
+#include <tuple>
 #include <memory>
 #include <unordered_map>
+#include <optional>
 
 
 class MorphingWindow final :  public fgl::GLWidget
@@ -37,7 +38,13 @@ public:
 	void onRender() override;
 	void onResize(size_t width, size_t height) override;
 
-	void keyReleaseEvent(QKeyEvent *event) override;
+	// void keyReleaseEvent(QKeyEvent *event) override;
+
+	void mouseMoveEvent(QMouseEvent* e) override;
+	void wheelEvent(QWheelEvent* event) override;
+
+	void mousePressEvent(QMouseEvent* e) override;
+	void mouseReleaseEvent(QMouseEvent*) override;
 
 signals:
 	void updateUI();
@@ -56,22 +63,47 @@ private:
 
 	[[nodiscard]] FpsGuard captureMetrics();
 
-	QLabel * fpsLabelValue_;
+	QMatrix4x4 currentMatrix() const;
+	std::tuple<float, float> gradToXY(int angle);
 
 	QOpenGLBuffer vbo_{QOpenGLBuffer::Type::VertexBuffer};
 	QOpenGLBuffer ibo_{QOpenGLBuffer::Type::IndexBuffer};
 	QOpenGLVertexArrayObject vao_;
 
-	morphing::Camera cam;
+	std::optional<QVector2D> mousePressPosition;
+	struct {
+    	QVector3D focusPoint = {0., 0., 0.};
+    	QVector3D cameraLocation = {0., 0., 30.};
+    	QVector3D up = QVector3D::crossProduct({-1., 0., 0.}, cameraLocation - focusPoint).normalized();
+	} camera;
+
 	GLint mUniform_ = -1;
 	GLint vUniform_ = -1;
 	GLint pUniform_ = -1;
 	GLint lightColorUniform_ = -1;
+	GLint lightIntensityUniform_ = -1;
 	GLint lightPosUniform_ = -1;
 	GLint viewPosUniform_ = -1;
 	GLint morphingUniform_ = -1;
 	QVector3D morphing_{1., 0., 0.}; 
+
+	QLabel * morphingValue;
 	QSlider morphingSlider = QSlider(Qt::Horizontal);
+
+	QLabel * lightColorValueR;
+	QSlider lightColorSliderR = QSlider(Qt::Horizontal);
+
+	QLabel * lightColorValueG;
+	QSlider lightColorSliderG = QSlider(Qt::Horizontal);
+
+	QLabel * lightColorValueB;
+	QSlider lightColorSliderB = QSlider(Qt::Horizontal);
+
+	QLabel * lightColorValueIntensity;
+	QSlider lightColorSliderIntensity = QSlider(Qt::Horizontal);
+
+	QLabel * lightPosValue;
+	QSlider lightPosSlider = QSlider(Qt::Horizontal);
 
     std::vector<Drawable> drawables;
 

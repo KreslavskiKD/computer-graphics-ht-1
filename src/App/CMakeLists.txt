@@ -5,7 +5,6 @@ set(SRCS
     
     Utils/Buffers.h
     Utils/Drawable.h
-    Utils/Camera.h
 
     Utils/FpsGuard.h
     Utils/FpsGuard.cpp
