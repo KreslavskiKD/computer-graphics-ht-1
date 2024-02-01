@@ -4,7 +4,6 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLTexture>
 #include <QOpenGLFunctions>
-#include <GL/gl.h>
 
 #include <memory>
 
