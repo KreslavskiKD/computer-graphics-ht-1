@@ -34,13 +34,12 @@ struct Drawable {
         funcs.glActiveTexture(GL_TEXTURE0);
         texture->bind();
 
-        #define BUFFER_OFFSET(i) ((char *)NULL + (i))
         if (ebo) {
             funcs.glDrawElements(
                 primitiveMode, 
                 static_cast<GLsizei>(indexAccessorCount),
                 indexAccessorComponentType,
-                BUFFER_OFFSET(indexAccessorByteOffset)
+                ((char *)NULL + (indexAccessorByteOffset))
             );
         } else {
             funcs.glDrawArrays(
@@ -49,7 +48,6 @@ struct Drawable {
                 static_cast<GLsizei>(indexAccessorCount)
             );
         }
-        #undef BUFFER_OFFSET
 
         texture->release();
         vao->release();

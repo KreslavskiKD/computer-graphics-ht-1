@@ -14,13 +14,6 @@
 #include <iostream>
 #include <cmath>
 
-#ifdef Q_OS_WIN32
-# include <windows.h>
-#else
-# include <X11/XKBlib.h>
-# undef KeyPress
-#endif
-
 // Define these only in *one* .cc file.
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
